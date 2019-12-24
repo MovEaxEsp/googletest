@@ -1262,19 +1262,29 @@ class MockSpec {
 
   // Adds a new default action spec to the function mocker and returns
   // the newly created spec.
+  template <typename INFO_TYPE>
   internal::OnCallSpec<F>& InternalDefaultActionSetAt(
-      const char* file, int line, const char* obj, const char* call) {
+      const char* file, int line, const char* obj, const char* call, const INFO_TYPE& info) {
+
+    ::std::stringstream infoStream;
+    infoStream << info;
+
     LogWithLocation(internal::kInfo, file, line,
-                    std::string("ON_CALL(") + obj + ", " + call + ") invoked");
+                    std::string("ON_CALL(") + obj + ", " + call + ") " + infoStream.str() + " invoked");
     return function_mocker_->AddNewOnCallSpec(file, line, matchers_);
   }
 
   // Adds a new expectation spec to the function mocker and returns
   // the newly created spec.
+  template <typename INFO_TYPE>
   internal::TypedExpectation<F>& InternalExpectedAt(
-      const char* file, int line, const char* obj, const char* call) {
+      const char* file, int line, const char* obj, const char* call, const INFO_TYPE& info) {
+
+    ::std::stringstream infoStream;
+    infoStream << info;
+        
     const std::string source_text(std::string("EXPECT_CALL(") + obj + ", " +
-                                  call + ")");
+                                  call + ") " + infoStream.str());
     LogWithLocation(internal::kInfo, file, line, source_text + " invoked");
     return function_mocker_->AddNewExpectation(
         file, line, source_text, matchers_);
@@ -1971,15 +1981,21 @@ GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
 // second argument is an internal type derived from the method signature. The
 // failure to disambiguate two overloads of this method in the ON_CALL statement
 // is how we block callers from setting expectations on overloaded methods.
-#define GMOCK_ON_CALL_IMPL_(mock_expr, Setter, call)                    \
+#define GMOCK_ON_CALL_IMPL_(mock_expr, Setter, call, info)              \
   ((mock_expr).gmock_##call)(::testing::internal::GetWithoutMatchers(), \
                              nullptr)                                   \
-      .Setter(__FILE__, __LINE__, #mock_expr, #call)
+      .Setter(__FILE__, __LINE__, #mock_expr, #call, info)
 
 #define ON_CALL(obj, call) \
-  GMOCK_ON_CALL_IMPL_(obj, InternalDefaultActionSetAt, call)
+  GMOCK_ON_CALL_IMPL_(obj, InternalDefaultActionSetAt, call, "")
 
 #define EXPECT_CALL(obj, call) \
-  GMOCK_ON_CALL_IMPL_(obj, InternalExpectedAt, call)
+  GMOCK_ON_CALL_IMPL_(obj, InternalExpectedAt, call, "")
+
+#define ON_CALL_INFO(obj, call, info) \
+  GMOCK_ON_CALL_IMPL_(obk, InternalDefaultActionSetAt, call, info)
+
+#define EXPECT_CALL_INFO(obj, call, info) \
+  GMOCK_ON_CALL_IMPL_(obj, InternalExpectedAt, call, info)
 
 #endif  // GMOCK_INCLUDE_GMOCK_GMOCK_SPEC_BUILDERS_H_
